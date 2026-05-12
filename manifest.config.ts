@@ -24,7 +24,7 @@ export default defineManifest({
   ],
   content_scripts: [{
     js: ['src/content/main.tsx'],
-    matches: ['https://www.google.com/maps/*'],
+    matches: ['https://www.google.com/maps/*', 'https://web.whatsapp.com/*'],
   }],
   side_panel: {
     default_path: 'src/sidepanel/index.html',

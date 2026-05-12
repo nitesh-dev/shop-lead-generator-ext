@@ -1,4 +1,4 @@
-import { delay } from '@/utils';
+import { delay, normalizePhone } from '@/utils';
 import { extensionApi } from '../services/extensionApi'
 
 export class WhatsAppAutomator {
@@ -109,6 +109,33 @@ export class WhatsAppAutomator {
         }
     }
 
+    async run() {
+        const settings = await extensionApi.getSettings();
+        const allLeads = await extensionApi.getAllLeads();
+        const template = settings?.messageTemplate || "Hello {{name}}!";
+        
+        const leadsToProcess = allLeads.filter((l: any) => l.shopData?.phone);
+        
+        if (leadsToProcess.length === 0) {
+            alert("No leads with phone numbers found!");
+            return;
+        }
+
+        if (!confirm(`Start sending messages to ${leadsToProcess.length} leads?`)) return;
+
+        for (const lead of leadsToProcess) {
+            const name = lead.shopData.name || 'Friend';
+            const phone = normalizePhone(lead.shopData.phone); // Clean phone number
+            const message = template.replace('{{name}}', name);
+            
+            console.log(`🚀 Sending to ${name} (${phone})...`);
+            await this.addToContactsAndMsg(name, phone, message);
+            await delay(5000); // Buffer between messages
+        }
+        
+        alert("Bulk messaging complete!");
+    }
+
     private injectTriggerButton() {
         if (document.getElementById('wa-bulk-btn')) return
         const btn = document.createElement('button');
@@ -116,7 +143,8 @@ export class WhatsAppAutomator {
         btn.textContent = 'Send Bulk Messages';
         btn.style.position = 'fixed';
         btn.style.top = '10px';
-        btn.style.right = '10px';
+        btn.style.left = '50%';
+        btn.style.transform = 'translateX(-50%)';
         btn.style.zIndex = '9999';
         btn.style.padding = '10px 20px';
         btn.style.backgroundColor = '#25D366';
@@ -127,7 +155,16 @@ export class WhatsAppAutomator {
         btn.style.fontWeight = '500';
         btn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
 
-        btn.onclick = () => this.addToContactsAndMsg('Test Name', '9234869224', 'Hello from the extension!');
+        btn.onclick = () => {
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            btn.style.backgroundColor = '#ccc';
+            this.run().finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Send Bulk Messages';
+                btn.style.backgroundColor = '#25D366';
+            });
+        };
         document.body.appendChild(btn);
     }
 

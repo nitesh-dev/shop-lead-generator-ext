@@ -3,5 +3,6 @@ export async function delay(ms: number) {
 }
 
 export function normalizePhone(phone: string): string {
-    return phone.replace(/\D/g, '');
+    // 085075 08611 -> 8507508611
+    return phone.replace(/[^\d+]/g, '').slice(-10);
 }
