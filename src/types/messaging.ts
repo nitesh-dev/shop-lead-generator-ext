@@ -1,11 +1,15 @@
 export type LeadStatus = 'new' | 'contacted' | 'interested' | 'not-interested';
 
 export interface LeadData {
-    id: string;
+    id: string; // Typically the CID or unique identifier from the URL
     siteUrl: string;
     businessName: string;
-    contactEmail?: string;
-    contactPhone?: string;
+    address?: string;
+    phoneNumber?: string;
+    website?: string;
+    rating?: number;
+    reviewsCount?: number;
+    category?: string;
     status: LeadStatus;
 }
 

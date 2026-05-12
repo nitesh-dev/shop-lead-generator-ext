@@ -20,11 +20,11 @@ export default defineManifest({
   },
   permissions: [
     'sidePanel',
-    'contentSettings',
+    'storage',
   ],
   content_scripts: [{
     js: ['src/content/main.tsx'],
-    matches: ['https://*/*'],
+    matches: ['https://www.google.com/maps/*'],
   }],
   side_panel: {
     default_path: 'src/sidepanel/index.html',
