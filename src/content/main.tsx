@@ -3,27 +3,7 @@
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-async function scrollFeedContainer(container: HTMLDivElement) {
-  let scrollBox: HTMLElement | null = null;
-  if (container.scrollHeight > container.clientHeight) {
-    scrollBox = container;
-  }
 
-  if (!scrollBox) {
-    console.log("❌ Scroll box not found");
-    return;
-  }
-
-  console.log("✅ Found scroll container");
-
-  scrollBox.scrollTo(0, scrollBox.scrollHeight);
-
-  await wait(2500);
-
-  const newHeight = scrollBox.scrollHeight;
-
-  console.log("📜 scrolling...", newHeight);
-}
 
 interface FeedItem {
   id: string;
@@ -37,84 +17,129 @@ interface ShopData {
   phone: string;
   website: string;
 }
-async function getFeedItems(container: HTMLDivElement) {
-  const items = container.querySelectorAll('div[role="article"]');
-  console.log(`📄 Found ${items.length} items on the page`);
-  console.log({ items });
+async function getFeedItems(
+  container: HTMLDivElement,
+  limit = 10
+) {
+  const processed = new Set<string>();
+  const feedItems: FeedItem[] = [];
 
-  let feedItems: FeedItem[] = [];
+  let noNewItemsCount = 0;
 
-  for (const item of items) {
-    let feedItem: FeedItem = {
-      id: "",
-      link: "",
-      shopData: null,
-    };
+  while (
+    noNewItemsCount < 5 &&
+    feedItems.length < limit
+  ) {
+    const items = Array.from(
+      container.querySelectorAll('div[role="article"]')
+    ) as HTMLDivElement[];
 
-    const linkEl = item.querySelector("a[href]") as HTMLAnchorElement | null;
-    // getting id from url path
-    const link = linkEl?.href || "";
-    const idMatch = link.match(/\/place\/([^\/]+)/);
-    const id = idMatch ? idMatch[1] : btoa(link);
+    let foundNew = false;
 
-    console.log(`🔗 Item ID: ${id}, Link: ${link}`);
-    feedItem.id = id;
-    feedItem.link = link;
+    for (const item of items) {
+      // stop immediately if limit reached
+      if (feedItems.length >= limit) {
+        break;
+      }
 
-    // click the item to open the detail panel
-    item.scrollIntoView({ behavior: "smooth", block: "center" });
-    await wait(500);
-    linkEl?.click();
-    await wait(3500);
+      const linkEl = item.querySelector(
+        "a[href]"
+      ) as HTMLAnchorElement | null;
 
-    let shopData: ShopData = {
-      name: "",
-      address: "",
-      phone: "",
-      website: "",
-    };
+      const link = linkEl?.href || "";
 
-    console.log("📋 Extracting shop data...");
+      const idMatch = link.match(/\/place\/([^\/]+)/);
 
-    let detailPanels = document.querySelectorAll(
-      'div[role="main"]'
-    ) as NodeListOf<HTMLDivElement>;
+      const id = idMatch
+        ? idMatch[1]
+        : btoa(link);
 
-    console.log("🔍 Looking for detail panel...", detailPanels);
-    if (detailPanels.length > 0) {
-      const detailPanel = detailPanels[1];
+      if (!id || processed.has(id)) {
+        continue;
+      }
 
-      shopData.name =
-        detailPanel?.querySelector("h1.DUwDvf")?.textContent?.trim() || "";
+      processed.add(id);
+      foundNew = true;
 
-      shopData.address =
-        detailPanel
-          ?.querySelector('button[data-item-id="address"] .Io6YTe')
-          ?.textContent?.trim() || "";
+      console.log(
+        `🔗 Processing ${feedItems.length + 1}/${limit}: ${id}`
+      );
 
-      shopData.phone =
-        detailPanel
-          ?.querySelector('button[data-item-id^="phone:tel:"] .Io6YTe')
-          ?.textContent?.trim() || "";
+      item.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
 
-      shopData.website =
-        (
-          detailPanel?.querySelector(
-            'a[data-item-id="authority"]'
-          ) as HTMLAnchorElement
-        )?.href || "";
+      await wait(1000);
 
-      feedItem.shopData = shopData;
-    } else {
-      console.log("❌ Detail panel not found for item ID:", id);
+      linkEl?.click();
+
+      await wait(3500);
+
+      const detailPanels = document.querySelectorAll(
+        'div[role="main"]'
+      ) as NodeListOf<HTMLDivElement>;
+
+      let shopData: ShopData = {
+        name: "",
+        address: "",
+        phone: "",
+        website: "",
+      };
+
+      if (detailPanels.length > 1) {
+        const detailPanel = detailPanels[1];
+
+        shopData.name =
+          detailPanel
+            ?.querySelector("h1")
+            ?.textContent?.trim() || "";
+
+        shopData.address =
+          detailPanel
+            ?.querySelector(
+              'button[data-item-id="address"] .Io6YTe'
+            )
+            ?.textContent?.trim() || "";
+
+        shopData.phone =
+          detailPanel
+            ?.querySelector(
+              'button[data-item-id^="phone:tel:"] .Io6YTe'
+            )
+            ?.textContent?.trim() || "";
+
+        shopData.website =
+          (
+            detailPanel?.querySelector(
+              'a[data-item-id="authority"]'
+            ) as HTMLAnchorElement
+          )?.href || "";
+      }
+
+      feedItems.push({
+        id,
+        link,
+        shopData,
+      });
     }
 
-    console.log("✅ Extracted shop data:", shopData);
+    if (!foundNew) {
+      noNewItemsCount++;
+    } else {
+      noNewItemsCount = 0;
+    }
+
+    container.scrollBy({
+      top: 2000,
+      behavior: "smooth",
+    });
+
+    await wait(2000);
   }
 
   return feedItems;
 }
-
 async function run() {
   console.log("🚀 Starting");
 
@@ -127,13 +152,8 @@ async function run() {
     return;
   }
 
-  await getFeedItems(feedContainer);
-  await scrollFeedContainer(feedContainer);
-
-  // await expandReviews();
-
-  await wait(2000);
-
+  let res = await getFeedItems(feedContainer);
+  console.table(res);
   console.log("🎉 Done");
 }
 
