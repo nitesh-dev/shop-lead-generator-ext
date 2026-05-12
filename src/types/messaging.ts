@@ -1,21 +1,19 @@
-export type LeadStatus = 'new' | 'contacted' | 'interested' | 'not-interested';
+export interface ShopData {
+  name: string;
+  address: string;
+  phone: string;
+  website: string;
+}
 
 export interface LeadData {
-    id: string; // Typically the CID or unique identifier from the URL
-    siteUrl: string;
-    businessName: string;
-    address?: string;
-    phoneNumber?: string;
-    website?: string;
-    rating?: number;
-    reviewsCount?: number;
-    category?: string;
-    status: LeadStatus;
+  id: string;
+  link: string;
+  shopData: ShopData | null;
 }
 
 export type MessageMap = {
     // Lead Management
-    'LEAD_FOUND': { lead: LeadData };
+    'LEAD_FOUND': LeadData;
     'GET_ALL_LEADS': void;
     
     // Auth & Settings

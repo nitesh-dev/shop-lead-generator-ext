@@ -1,4 +1,4 @@
-// import { extensionApi } from '../services/extensionApi'
+import { extensionApi } from '../services/extensionApi'
 // import { LeadData } from '../types/messaging'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -122,6 +122,9 @@ async function getFeedItems(
         link,
         shopData,
       });
+
+      // Send to background immediately
+      extensionApi.reportLead({ id, link, shopData });
     }
 
     if (!foundNew) {
@@ -157,4 +160,41 @@ async function run() {
   console.log("🎉 Done");
 }
 
-setTimeout(run.bind(null), 3000);
+function initUI() {
+  setInterval(() => {
+    const feedContainer = document.querySelector('div[role="feed"]');
+    if (feedContainer && !document.getElementById('lead-gen-btn')) {
+      const btn = document.createElement('button');
+      btn.id = 'lead-gen-btn';
+      btn.textContent = 'Generate Leads';
+      btn.style.position = 'fixed';
+      btn.style.top = '10px';
+      btn.style.left = '50%';
+      btn.style.transform = 'translateX(-50%)';
+      btn.style.zIndex = '9999';
+      btn.style.padding = '10px 20px';
+      btn.style.backgroundColor = '#1a73e8';
+      btn.style.color = 'white';
+      btn.style.border = 'none';
+      btn.style.borderRadius = '24px';
+      btn.style.cursor = 'pointer';
+      btn.style.fontWeight = '500';
+      btn.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+
+      btn.onclick = () => {
+        btn.disabled = true;
+        btn.textContent = 'Scraping...';
+        btn.style.backgroundColor = '#ccc';
+        run().finally(() => {
+          btn.disabled = false;
+          btn.textContent = 'Generate Leads';
+          btn.style.backgroundColor = '#1a73e8';
+        });
+      };
+
+      document.body.appendChild(btn);
+    }
+  }, 2000);
+}
+
+initUI();

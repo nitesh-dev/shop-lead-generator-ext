@@ -15,10 +15,6 @@ export async function sendMessage<K extends MessageType>(
 }
 
 export const extensionApi = {
-    startScraping: (url: string) => sendMessage('START_SCRAPING', { url }),
-    stopScraping: () => sendMessage('STOP_SCRAPING', undefined),
     getAllLeads: () => sendMessage('GET_ALL_LEADS', undefined),
-    reportLead: (lead: MessageMap['LEAD_FOUND']['lead']) => sendMessage('LEAD_FOUND', { lead }),
-    updateSettings: (settings: MessageMap['UPDATE_SETTINGS']) => sendMessage('UPDATE_SETTINGS', settings),
-    getAuthStatus: () => sendMessage('GET_AUTH_STATUS', undefined),
+    reportLead: (lead: MessageMap['LEAD_FOUND']) => sendMessage('LEAD_FOUND', lead),
 };
