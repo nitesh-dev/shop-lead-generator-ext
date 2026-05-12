@@ -27,6 +27,32 @@ header h1 {
   font-weight: 600;
 }
 
+.settings-bar {
+  background: #f1f5f9;
+  padding: 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.settings-bar label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.settings-bar input {
+  flex: 1;
+  padding: 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
 .actions {
   display: flex;
   gap: 8px;

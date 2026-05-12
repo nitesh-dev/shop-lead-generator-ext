@@ -17,4 +17,6 @@ export async function sendMessage<K extends MessageType>(
 export const extensionApi = {
     getAllLeads: () => sendMessage('GET_ALL_LEADS', undefined),
     reportLead: (lead: MessageMap['LEAD_FOUND']) => sendMessage('LEAD_FOUND', lead),
+    getSettings: () => sendMessage('GET_SETTINGS', undefined),
+    updateSettings: (settings: MessageMap['UPDATE_SETTINGS']) => sendMessage('UPDATE_SETTINGS', settings),
 };

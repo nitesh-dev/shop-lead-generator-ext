@@ -1,27 +1,32 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { LeadData } from '../types/messaging'
+import { LeadData, Settings } from '../types/messaging'
 import { extensionApi } from '../services/extensionApi'
 
 export default function App() {
   const [leads, setLeads] = useState<LeadData[]>([])
+  const [settings, setSettings] = useState<Settings>({ limit: 10 })
 
-  const fetchLeads = async () => {
+  const fetchData = async () => {
     try {
-      const leadsList = await extensionApi.getAllLeads();
-      setLeads(leadsList || []);
+      const [leadsList, currentSettings] = await Promise.all([
+        extensionApi.getAllLeads(),
+        extensionApi.getSettings()
+      ]);
+      setLeads([...(leadsList || [])].reverse());
+      if (currentSettings) setSettings(currentSettings);
     } catch (error) {
-      console.error('Failed to fetch leads:', error);
+      console.error('Failed to fetch data:', error);
     }
   }
 
   useEffect(() => {
-    fetchLeads()
+    fetchData()
 
     // Listen for storage changes
     const listener = (changes: any) => {
       if (changes.leads) {
-        setLeads(changes.leads.newValue || [])
+        setLeads([...(changes.leads.newValue || [])].reverse())
       }
     }
 
@@ -57,10 +62,30 @@ export default function App() {
     document.body.removeChild(a)
   }
 
+  const exportJSON = () => {
+    if (leads.length === 0) return
+    
+    const blob = new Blob([JSON.stringify(leads, null, 2)], { type: 'application/json' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.setAttribute('hidden', '')
+    a.setAttribute('href', url)
+    a.setAttribute('download', `leads_${new Date().toISOString().split('T')[0]}.json`)
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
   const clearLeads = async () => {
     if (confirm('Clear all leads?')) {
       await chrome.storage.local.set({ leads: [] })
     }
+  }
+
+  const handleLimitChange = async (newLimit: number) => {
+    const updatedSettings = { limit: newLimit };
+    setSettings(updatedSettings);
+    await extensionApi.updateSettings(updatedSettings);
   }
 
   return (
@@ -70,8 +95,22 @@ export default function App() {
           <div className="stats">Found: {leads.length}</div>
        </header>
 
+       <div className="settings-bar">
+          <label>
+            Scrape Limit:
+            <input 
+              type="number" 
+              value={settings.limit} 
+              onChange={(e) => handleLimitChange(parseInt(e.target.value) || 1)}
+              min="1"
+              max="500"
+            />
+          </label>
+       </div>
+
        <div className="actions">
-          <button onClick={exportCSV} disabled={leads.length === 0} className="primary">Export CSV</button>
+          <button onClick={exportCSV} disabled={leads.length === 0} className="primary">CSV</button>
+          <button onClick={exportJSON} disabled={leads.length === 0} className="primary">JSON</button>
           <button onClick={clearLeads} disabled={leads.length === 0} className="secondary">Clear</button>
        </div>
 

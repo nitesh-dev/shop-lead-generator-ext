@@ -29,6 +29,14 @@ chrome.runtime.onMessage.addListener((msg: any, _sender, sendResponse) => {
                     const allLeadsData = await chrome.storage.local.get('leads');
                     result = Array.isArray(allLeadsData.leads) ? allLeadsData.leads : [];
                     break;
+                case 'GET_SETTINGS':
+                    const settings = await chrome.storage.local.get('settings');
+                    result = settings.settings || { limit: 10 };
+                    break;
+                case 'UPDATE_SETTINGS':
+                    await chrome.storage.local.set({ settings: message.payload });
+                    result = { success: true };
+                    break;
                 default:
                     sendResponse({ success: false, error: 'Unknown message type' } as ApiResponse);
                     return;

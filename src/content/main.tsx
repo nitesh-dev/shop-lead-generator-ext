@@ -146,6 +146,9 @@ async function getFeedItems(
 async function run() {
   console.log("🚀 Starting");
 
+  const settings = await extensionApi.getSettings();
+  const limit = settings?.limit || 10;
+
   const feedContainer = document.querySelector<HTMLElement>(
     'div[role="feed"]'
   ) as HTMLDivElement | null;
@@ -155,7 +158,7 @@ async function run() {
     return;
   }
 
-  let res = await getFeedItems(feedContainer);
+  let res = await getFeedItems(feedContainer, limit);
   console.table(res);
   console.log("🎉 Done");
 }
