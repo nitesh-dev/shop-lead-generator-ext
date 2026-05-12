@@ -24,9 +24,9 @@ export default function App() {
     fetchData()
 
     // Listen for storage changes
-    const listener = (changes: any) => {
+    const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
       if (changes.leads) {
-        setLeads([...(changes.leads.newValue || [])].reverse())
+        setLeads([...((changes.leads.newValue as LeadData[]) || [])].reverse())
       }
     }
 

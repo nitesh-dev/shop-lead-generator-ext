@@ -1,37 +1,41 @@
-import { ExtensionMessage, ApiResponse } from "../types/messaging";
+import { ExtensionMessage, ApiResponse, LeadData, Settings } from "../types/messaging";
 
-chrome.runtime.onMessage.addListener((msg: any, _sender, sendResponse) => {
-    const message = msg as ExtensionMessage<any>;
+chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
+    const message = msg as ExtensionMessage;
     console.log('[Background] Received message:', message.type);
 
-    // Use an async IIFE to handle promises in addListener
     (async () => {
         try {
-            let result: any;
+            let result: unknown;
 
             switch (message.type) {
                 case 'LEAD_FOUND':
                     const storage = await chrome.storage.local.get('leads');
-                    const leads = Array.isArray(storage.leads) ? storage.leads : [];
-                    const newLead = message.payload;
+                    const leads = Array.isArray(storage.leads) ? (storage.leads as LeadData[]) : [];
+                    const newLead = message.payload as LeadData;
+                    console.log({newLead})
                     
-                    // Basic deduplication
-                    if (!leads.find((l: any) => l.id === newLead.id)) {
+                    const existingLeadIndex = leads.findIndex((l) => l.id === newLead.id);
+                    
+                    if (existingLeadIndex === -1) {
                         const updatedLeads = [...leads, newLead];
                         await chrome.storage.local.set({ leads: updatedLeads });
                         result = { saved: true };
                         console.log('[Background] New lead saved:', newLead.shopData?.name);
                     } else {
-                        result = { saved: false, reason: 'duplicate' };
+                        leads[existingLeadIndex] = newLead;
+                        await chrome.storage.local.set({ leads });
+                        result = { saved: true, updated: true };
+                        console.log('[Background] Lead updated:', newLead.shopData?.name);
                     }
                     break;
                 case 'GET_ALL_LEADS':
                     const allLeadsData = await chrome.storage.local.get('leads');
-                    result = Array.isArray(allLeadsData.leads) ? allLeadsData.leads : [];
+                    result = Array.isArray(allLeadsData.leads) ? (allLeadsData.leads as LeadData[]) : [];
                     break;
                 case 'GET_SETTINGS':
-                    const settings = await chrome.storage.local.get('settings');
-                    result = settings.settings || { limit: 10 };
+                    const settingsData = await chrome.storage.local.get('settings');
+                    result = (settingsData.settings as Settings) || { limit: 10 };
                     break;
                 case 'UPDATE_SETTINGS':
                     await chrome.storage.local.set({ settings: message.payload });
@@ -49,5 +53,5 @@ chrome.runtime.onMessage.addListener((msg: any, _sender, sendResponse) => {
         }
     })();
 
-    return true; // Keep the message channel open for async response
+    return true;
 });
