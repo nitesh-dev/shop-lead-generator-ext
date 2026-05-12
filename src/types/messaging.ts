@@ -13,6 +13,7 @@ export interface LeadData {
 
 export interface Settings {
   limit: number;
+  messageTemplate?: string;
 }
 
 export type MessageMap = {

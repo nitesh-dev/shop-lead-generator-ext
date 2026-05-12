@@ -7,6 +7,7 @@ export interface ShopData {
   address: string;
   phone: string;
   website: string;
+  category?: string;
 }
 
 export interface FeedItem {
@@ -76,6 +77,7 @@ export class MapsScraper {
           shopData.address = detailPanel?.querySelector('button[data-item-id="address"] .Io6YTe')?.textContent?.trim() || "";
           shopData.phone = detailPanel?.querySelector('button[data-item-id^="phone:tel:"] .Io6YTe')?.textContent?.trim() || "";
           shopData.website = (detailPanel?.querySelector('a[data-item-id="authority"]') as HTMLAnchorElement)?.href || "";
+          shopData.category = detailPanel?.querySelector('button[jsaction*="category"]')?.textContent?.trim() || "";
         }
 
         this.feedItems.push({ id, link, shopData });
