@@ -54,11 +54,20 @@ export const WhatsAppPanel: React.FC = () => {
     },
     {
       header: 'Status',
-      accessor: () => (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100 uppercase tracking-tighter">
-          Pending
-        </span>
-      ),
+      accessor: (lead: any) => {
+        const status = lead.status || 'pending';
+        const styles: Record<string, string> = {
+          pending: 'bg-amber-50 text-amber-600 border-amber-100',
+          sent: 'bg-green-50 text-green-600 border-green-100',
+          failed: 'bg-red-50 text-red-600 border-red-100'
+        };
+
+        return (
+          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-tighter ${styles[status]}`}>
+            {status}
+          </span>
+        );
+      },
     }
   ];
 

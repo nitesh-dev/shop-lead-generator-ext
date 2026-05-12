@@ -137,12 +137,18 @@ export class WhatsAppAutomator {
 
         for (const lead of leadsToProcess) {
             const name = lead.shopData.name || 'Friend';
-            const phone = normalizePhone(lead.shopData.phone); // Clean phone number
+            const phone = normalizePhone(lead.shopData.phone);
             const message = template.replace('{{name}}', name);
 
             console.log(`🚀 Sending to ${name} (${phone})...`);
-            await this.addToContactsAndMsg(name, phone, message);
-            await delay(5000); // Buffer between messages
+            try {
+                await this.addToContactsAndMsg(name, phone, message);
+                await extensionApi.reportLead({ ...lead, status: 'sent' });
+            } catch (err) {
+                console.error(`Failed to send to ${name}`, err);
+                await extensionApi.reportLead({ ...lead, status: 'failed' });
+            }
+            await delay(5000);
         }
 
         alert("Bulk messaging complete!");

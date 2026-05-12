@@ -3,12 +3,14 @@ export interface ShopData {
   address: string;
   phone: string;
   website: string;
+  category?: string;
 }
 
 export interface LeadData {
   id: string;
   link: string;
   shopData: ShopData | null;
+  status?: 'pending' | 'sent' | 'failed';
 }
 
 export interface Settings {
