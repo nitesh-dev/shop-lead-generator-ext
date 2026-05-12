@@ -4,6 +4,7 @@ import { Card, Button, Table } from '../../components/ui';
 
 export const WhatsAppPanel: React.FC = () => {
   const [template, setTemplate] = useState('');
+  const [waLimit, setWaLimit] = useState(10);
   const [leads, setLeads] = useState<any[]>([]);
 
   useEffect(() => {
@@ -13,6 +14,7 @@ export const WhatsAppPanel: React.FC = () => {
   const loadData = async () => {
     const settings = await extensionApi.getSettings();
     if (settings?.messageTemplate) setTemplate(settings.messageTemplate);
+    if (settings?.whatsappLimit) setWaLimit(settings.whatsappLimit);
     const allLeads = await extensionApi.getAllLeads();
     setLeads(allLeads.filter((l: any) => l.shopData?.phone));
   };
@@ -22,7 +24,8 @@ export const WhatsAppPanel: React.FC = () => {
     await extensionApi.updateSettings({ 
       ...currentSettings,
       limit: currentSettings?.limit || 10,
-      messageTemplate: template 
+      messageTemplate: template,
+      whatsappLimit: waLimit
     });
   };
 
@@ -30,7 +33,7 @@ export const WhatsAppPanel: React.FC = () => {
     {
       header: 'Name',
       accessor: (lead: any) => (
-        <div className="font-bold text-slate-800 truncate max-w-[100px] sm:max-w-[140px]">
+        <div className="font-bold text-slate-800  sm:max-w-[140px]">
           {lead.shopData?.name}
         </div>
       ),
@@ -75,21 +78,34 @@ export const WhatsAppPanel: React.FC = () => {
     <div className="space-y-4 pb-10">
       <Card title="Message Configuration">
         <div className="space-y-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-slate-600">Message Template</label>
-            <textarea 
-              value={template} 
-              onChange={(e) => setTemplate(e.target.value)}
-              placeholder="Hello {{name}}, I found your shop..."
-              className="w-full h-32 p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-whatsapp focus:border-transparent transition-all outline-none resize-none text-sm leading-relaxed"
-            />
-            <div className="flex justify-between items-center">
-              <p className="text-[10px] text-slate-400 font-medium italic">Use {"{{name}}"} for replacement.</p>
-              <div className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase font-bold tracking-tighter">Draft</div>
+          <div className="grid grid-cols-1 gap-4">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-600">Send Limit (Queue)</label>
+              <input 
+                type="number" 
+                value={waLimit} 
+                onChange={(e) => setWaLimit(parseInt(e.target.value))}
+                min="1"
+                className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+              />
+            </div>
+            
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-slate-600">Message Template</label>
+              <textarea 
+                value={template} 
+                onChange={(e) => setTemplate(e.target.value)}
+                placeholder="Hello {{name}}, I found your shop..."
+                className="w-full h-32 p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-whatsapp focus:border-transparent transition-all outline-none resize-none text-sm leading-relaxed"
+              />
+              <div className="flex justify-between items-center">
+                <p className="text-[10px] text-slate-400 font-medium italic">Use {"{{name}}"} for replacement.</p>
+                <div className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded uppercase font-bold tracking-tighter">Draft</div>
+              </div>
             </div>
           </div>
           <Button variant="whatsapp" fullWidth onClick={handleSave}>
-            Save Template
+            Save Configuration
           </Button>
         </div>
       </Card>

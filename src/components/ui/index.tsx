@@ -15,7 +15,7 @@ export const Card: React.FC<CardProps> = ({ children, className = '', title, hea
         {headerAction && <div className="flex-shrink-0">{headerAction}</div>}
       </div>
     )}
-    <div className="p-3 sm:p-4 flex-1">{children}</div>
+    <div className="p-3 flex-1">{children}</div>
   </div>
 );
 

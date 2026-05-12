@@ -16,6 +16,7 @@ export interface LeadData {
 export interface Settings {
   limit: number;
   messageTemplate?: string;
+  whatsappLimit?: number;
 }
 
 export type MessageMap = {

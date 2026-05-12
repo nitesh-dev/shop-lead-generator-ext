@@ -125,15 +125,19 @@ export class WhatsAppAutomator {
         const settings = await extensionApi.getSettings();
         const allLeads = await extensionApi.getAllLeads();
         const template = settings?.messageTemplate || "Hello {{name}}!";
+        const waLimit = settings?.whatsappLimit || 10;
 
-        const leadsToProcess = allLeads.filter((l: any) => l.shopData?.phone);
+        // Only process leads with phones that aren't already 'sent'
+        const leadsToProcess = allLeads
+            .filter((l: any) => l.shopData?.phone && l.status !== 'sent')
+            .slice(0, waLimit);
 
         if (leadsToProcess.length === 0) {
-            alert("No leads with phone numbers found!");
+            alert("No unsent leads with phone numbers found!");
             return;
         }
 
-        if (!confirm(`Start sending messages to ${leadsToProcess.length} leads?`)) return;
+        if (!confirm(`Start sending messages to ${leadsToProcess.length} leads? (Limit: ${waLimit})`)) return;
 
         for (const lead of leadsToProcess) {
             const name = lead.shopData.name || 'Friend';
