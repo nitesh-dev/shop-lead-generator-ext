@@ -11,23 +11,55 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
             switch (message.type) {
                 case 'LEAD_FOUND':
                     const storage = await chrome.storage.local.get('leads');
-                    const leads = Array.isArray(storage.leads) ? (storage.leads as LeadData[]) : [];
+                    let leads = Array.isArray(storage.leads) ? (storage.leads as LeadData[]) : [];
+                    
+                    // Cleanup existing duplicates and invalid entries before processing
+                    const seenPhones = new Set<string>();
+                    leads = leads.filter(l => {
+                        const p = l.shopData?.phone;
+                        if (!p || p.trim() === '') return false; // Remove if no phone
+                        const normalized = p.replace(/[^\d+]/g, '');
+                        if (seenPhones.has(normalized)) return false; // Remove duplicate
+                        seenPhones.add(normalized);
+                        return true;
+                    });
+
                     const newLead = message.payload as LeadData;
+                    const newPhone = newLead.shopData?.phone;
+
+                    // If phone is missing, skip the lead
+                    if (!newPhone || newPhone.trim() === '') {
+                        console.log('[Background] Skipping lead: No phone number');
+                        result = { saved: false, reason: 'missing_phone' };
+                        // Save the cleaned list even if we skip the new one
+                        await chrome.storage.local.set({ leads });
+                        break;
+                    }
+                    
+                    const normalizedNewPhone = newPhone.replace(/[^\d+]/g, '');
                     console.log({newLead})
                     
-                    const existingLeadIndex = leads.findIndex((l) => l.id === newLead.id);
+                    // Filter by phone number only
+                    const existingLeadIndex = leads.findIndex((l) => {
+                        const existingPhone = l.shopData?.phone;
+                        if (existingPhone) {
+                            const normalize = (p: string) => p.replace(/[^\d+]/g, '');
+                            return normalize(existingPhone) === normalizedNewPhone;
+                        }
+                        return false;
+                    });
                     
                     if (existingLeadIndex === -1) {
-                        const updatedLeads = [...leads, newLead];
-                        await chrome.storage.local.set({ leads: updatedLeads });
+                        leads.push(newLead);
                         result = { saved: true };
                         console.log('[Background] New lead saved:', newLead.shopData?.name);
                     } else {
                         leads[existingLeadIndex] = newLead;
-                        await chrome.storage.local.set({ leads });
                         result = { saved: true, updated: true };
-                        console.log('[Background] Lead updated:', newLead.shopData?.name);
+                        console.log('[Background] Lead updated (merged):', newLead.shopData?.name);
                     }
+                    
+                    await chrome.storage.local.set({ leads });
                     break;
                 case 'GET_ALL_LEADS':
                     const allLeadsData = await chrome.storage.local.get('leads');
