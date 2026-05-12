@@ -67,6 +67,19 @@ export class WhatsAppAutomator {
                 saveBtn.click();
             } else {
                 console.error("Save button not found");
+
+                // back 2 steps to return to chat list | data-testid="back-refreshed"
+
+                for (let i = 0; i < 2; i++) {
+                    let backBtn = document.querySelector('span[data-testid="back-refreshed"]') as HTMLDivElement | null;
+                    if (backBtn) {
+                        backBtn.click();
+                        await delay(2000);
+                    } else {
+                        console.error("Back button not found");
+                        // return;
+                    }
+                }
                 return;
             }
         }
@@ -90,13 +103,12 @@ export class WhatsAppAutomator {
             sendBtn.click();
         } else {
             console.error("Send button not found");
-            return
         }
 
         await delay(2000);
 
         // back 2 steps to return to chat list | data-testid="back-refreshed"
-        
+
         for (let i = 0; i < 2; i++) {
             let backBtn = document.querySelector('span[data-testid="back-refreshed"]') as HTMLDivElement | null;
             if (backBtn) {
@@ -113,9 +125,9 @@ export class WhatsAppAutomator {
         const settings = await extensionApi.getSettings();
         const allLeads = await extensionApi.getAllLeads();
         const template = settings?.messageTemplate || "Hello {{name}}!";
-        
+
         const leadsToProcess = allLeads.filter((l: any) => l.shopData?.phone);
-        
+
         if (leadsToProcess.length === 0) {
             alert("No leads with phone numbers found!");
             return;
@@ -127,12 +139,12 @@ export class WhatsAppAutomator {
             const name = lead.shopData.name || 'Friend';
             const phone = normalizePhone(lead.shopData.phone); // Clean phone number
             const message = template.replace('{{name}}', name);
-            
+
             console.log(`🚀 Sending to ${name} (${phone})...`);
             await this.addToContactsAndMsg(name, phone, message);
             await delay(5000); // Buffer between messages
         }
-        
+
         alert("Bulk messaging complete!");
     }
 
