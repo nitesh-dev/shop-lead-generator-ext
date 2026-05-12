@@ -2,33 +2,6 @@ import { delay } from '@/utils';
 import { extensionApi } from '../services/extensionApi'
 
 export class WhatsAppAutomator {
-    private isRunning = false;
-
-    // async sendBulkMessages() {
-    //     if (this.isRunning) return;
-    //     this.isRunning = true;
-
-    //     console.log("🚀 Starting WhatsApp Automation");
-    //     const leads = await extensionApi.getAllLeads();
-    //     const settings = await extensionApi.getSettings();
-    //     const messageTemplate = settings?.messageTemplate || "Hello {{name}}, I found your shop on Google Maps.";
-
-    //     for (const lead of leads) {
-    //         if (!lead.shopData?.phone) continue;
-
-    //         const phone = lead.shopData.phone.replace(/\D/g, '');
-    //         const message = messageTemplate.replace("{{name}}", lead.shopData.name || "there");
-
-    //         console.log(`📱 Sending to ${phone}...`);
-    //         await this.sendToNumber(phone, message);
-    //         await wait(5000); // Cooling period
-    //     }
-
-    //     this.isRunning = false;
-    //     console.log("🎉 WhatsApp Automation Done");
-    // }
-
-
 
     private async addToContactsAndMsg(name: string, phone: string, msg: string) {
 
@@ -117,6 +90,22 @@ export class WhatsAppAutomator {
             sendBtn.click();
         } else {
             console.error("Send button not found");
+            return
+        }
+
+        await delay(2000);
+
+        // back 2 steps to return to chat list | data-testid="back-refreshed"
+        
+        for (let i = 0; i < 2; i++) {
+            let backBtn = document.querySelector('span[data-testid="back-refreshed"]') as HTMLDivElement | null;
+            if (backBtn) {
+                backBtn.click();
+                await delay(2000);
+            } else {
+                console.error("Back button not found");
+                // return;
+            }
         }
     }
 
@@ -149,7 +138,6 @@ export class WhatsAppAutomator {
             await delay(2000);
         }
         this.injectTriggerButton();
-
 
     }
 }
