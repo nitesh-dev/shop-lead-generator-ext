@@ -78,6 +78,28 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
                     await chrome.storage.local.set({ settings: message.payload });
                     result = { success: true };
                     break;
+                case 'IMPORT_LEADS':
+                    const importLeads = message.payload as LeadData[];
+                    const currentData = await chrome.storage.local.get('leads');
+                    let currentLeads = Array.isArray(currentData.leads) ? (currentData.leads as LeadData[]) : [];
+                    
+                    const existingPhones = new Set(currentLeads.map(l => l.shopData?.phone?.replace(/[^\d+]/g, '')).filter(Boolean));
+                    
+                    const newLeads = importLeads.filter(lead => {
+                        const phone = lead.shopData?.phone?.replace(/[^\d+]/g, '');
+                        if (!phone || existingPhones.has(phone)) return false;
+                        existingPhones.add(phone);
+                        return true;
+                    });
+                    
+                    const mergedLeads = [...currentLeads, ...newLeads];
+                    await chrome.storage.local.set({ leads: mergedLeads });
+                    result = { count: newLeads.length };
+                    break;
+                case 'CLEAR_ALL_LEADS':
+                    await chrome.storage.local.set({ leads: [] });
+                    result = { success: true };
+                    break;
                 default:
                     sendResponse({ success: false, error: 'Unknown message type' } as ApiResponse);
                     return;

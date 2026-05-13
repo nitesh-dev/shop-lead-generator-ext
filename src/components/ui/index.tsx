@@ -20,7 +20,7 @@ export const Card: React.FC<CardProps> = ({ children, className = '', title, hea
 );
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'whatsapp' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'whatsapp' | 'ghost' | 'outline';
   fullWidth?: boolean;
 }
 
@@ -36,7 +36,8 @@ export const Button: React.FC<ButtonProps> = ({
     primary: "bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg",
     secondary: "bg-slate-200 hover:bg-slate-300 text-slate-700",
     whatsapp: "bg-whatsapp hover:bg-green-600 text-white shadow-md hover:shadow-lg",
-    ghost: "bg-transparent hover:bg-slate-100 text-slate-600 border border-slate-200"
+    ghost: "bg-transparent hover:bg-slate-100 text-slate-600 border border-slate-200",
+    outline: "bg-transparent hover:bg-slate-50 text-slate-700 border border-slate-300",
   };
 
   return (

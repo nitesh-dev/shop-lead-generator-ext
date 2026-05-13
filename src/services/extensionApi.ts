@@ -1,4 +1,4 @@
-import { ExtensionMessage, MessageMap, MessageType, ApiResponse } from "../types/messaging";
+import { ExtensionMessage, MessageMap, MessageType, ApiResponse, LeadData } from "../types/messaging";
 
 export async function sendMessage<K extends MessageType>(
     type: K,
@@ -17,6 +17,8 @@ export async function sendMessage<K extends MessageType>(
 export const extensionApi = {
     getAllLeads: () => sendMessage('GET_ALL_LEADS', undefined),
     reportLead: (lead: MessageMap['LEAD_FOUND']) => sendMessage('LEAD_FOUND', lead),
+    importLeads: (leads: LeadData[]) => sendMessage('IMPORT_LEADS', leads),
+    clearAllLeads: () => sendMessage('CLEAR_ALL_LEADS', undefined),
     getSettings: () => sendMessage('GET_SETTINGS', undefined),
     updateSettings: (settings: MessageMap['UPDATE_SETTINGS']) => sendMessage('UPDATE_SETTINGS', settings),
 };

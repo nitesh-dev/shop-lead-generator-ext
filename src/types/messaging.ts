@@ -23,6 +23,8 @@ export type MessageMap = {
     // Lead Management
     'LEAD_FOUND': LeadData;
     'GET_ALL_LEADS': void;
+    'IMPORT_LEADS': LeadData[];
+    'CLEAR_ALL_LEADS': void;
     
     // Settings
     'GET_SETTINGS': void;
