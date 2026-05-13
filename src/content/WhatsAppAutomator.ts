@@ -3,43 +3,33 @@ import { extensionApi } from '../services/extensionApi'
 
 export class WhatsAppAutomator {
 
-    private async addToContactsAndMsg(name: string, phone: string, msg: string) {
-
-        //click new chat button | data-testid="new-chat-outline"
+    private async openNewChatDrawer() {
         let newChatBtn = document.querySelector('span[data-testid="new-chat-outline"]') as HTMLSpanElement | null;
-
         if (!newChatBtn) {
-            console.error("New chat button not found");
-            return;
+            throw new Error("New chat button not found");
         }
-
         newChatBtn.click();
         await delay(3000);
+    }
 
-        // click new contact | data-testid="new-chat-drawer-new-contact-cell"
+    private async openNewContactForm() {
         let newContactBtn = document.querySelector('div[data-testid="new-chat-drawer-new-contact-cell"]') as HTMLButtonElement | null;
-
         if (!newContactBtn) {
-            console.error("New contact button not found");
-            return;
+            throw new Error("New contact button not found");
         }
-
         newContactBtn.click();
         await delay(3000);
+    }
 
-        // fill name and phone | name -> data-testid="text-input" | phone -> data-testid="phone-number-input" | sync -> id="sync-contact-switch"
+    private async fillContactInfo(name: string, phone: string) {
         let nameInput = document.querySelector('div[data-testid="text-input"]') as HTMLInputElement | null;
         let phoneInput = document.querySelector('input[data-testid="phone-number-input"]') as HTMLInputElement | null;
-        // label for="sync-contact-switch"
         let syncSwitch = document.querySelector('label[for="sync-contact-switch"]>span') as HTMLLabelElement | null;
 
         if (!nameInput || !phoneInput || !syncSwitch) {
-            console.error("One or more input fields not found");
-            return;
+            throw new Error("One or more input fields not found");
         }
 
-        // WhatsApp uses Lexical editor for these fields. 
-        // Focus and use document.execCommand('insertText') for contenteditable
         nameInput.focus();
         document.execCommand('insertText', false, name);
         await delay(1000);
@@ -49,79 +39,115 @@ export class WhatsAppAutomator {
 
         await delay(1000);
         syncSwitch.click()
-
-        // syncSwitch.dispatchEvent(new Event('change', { bubbles: true }));
-
         await delay(3000);
+    }
 
-        // check if contact already exists by looking for the warning message | id="contact-phone-number-fields-error" -> button
+    private async saveContact() {
         let errorBtn = document.querySelector('#contact-phone-number-fields-error button') as HTMLButtonElement | null;
         if (errorBtn) {
             console.warn("Contact already exists, proceeding to message");
             errorBtn.click();
             await delay(2000);
-        } else {
-            // save | data-testid="save-contact-btn"
-            let saveBtn = document.querySelector('div[data-testid="save-contact-btn"]') as HTMLButtonElement | null;
-            if (saveBtn) {
-                saveBtn.click();
-            } else {
-                console.error("Save button not found");
-
-                // back 2 steps to return to chat list | data-testid="back-refreshed"
-
-                for (let i = 0; i < 2; i++) {
-                    let backBtn = document.querySelector('span[data-testid="back-refreshed"]') as HTMLDivElement | null;
-                    if (backBtn) {
-                        backBtn.click();
-                        await delay(2000);
-                    } else {
-                        console.error("Back button not found");
-                        // return;
-                    }
-                }
-                return;
-            }
-        }
-
-
-        // sending message 
-        await delay(2000);
-        let messageInput = document.querySelector('div[data-testid="conversation-compose-box-input"]') as HTMLDivElement | null;
-
-        if (!messageInput) {
-            console.error("Message input box not found");
             return;
         }
 
+        let saveBtn = document.querySelector('div[data-testid="save-contact-btn"]') as HTMLButtonElement | null;
+        if (saveBtn) {
+            saveBtn.click();
+            await delay(2000);
+        } else {
+            throw new Error("Save button not found");
+        }
+    }
+
+    private async sendMessageToCurrentChat(msg: string) {
+        let messageInput = document.querySelector('div[data-testid="conversation-compose-box-input"]') as HTMLDivElement | null;
+        if (!messageInput) {
+            throw new Error("Message input box not found");
+        }
+
         messageInput.focus();
-        document.execCommand('insertText', false, msg);
-        await delay(1000);
+
+        const lines = msg.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            
+            // Fake typing: insert characters one by one with a small delay
+            for (const char of line) {
+                document.execCommand('insertText', false, char);
+                // Random delay between characters to simulate real typing (20ms to 50ms)
+                await delay(Math.floor(Math.random() * 10) + 0);
+            }
+
+            if (i < lines.length - 1) {
+                // To simulate Shift + Enter for a new line in a modern browser:
+                const event = new KeyboardEvent('keydown', {
+                    key: 'Enter',
+                    code: 'Enter',
+                    shiftKey: true,
+                    bubbles: true,
+                    cancelable: true,
+                });
+                messageInput.dispatchEvent(event);
+                
+                // Using insertText with '\n' instead of insertLineBreak is often 
+                // more compatible with Lexical editors and prevents buffer clearing.
+                document.execCommand('insertText', false, '\n');
+                await delay(200); 
+            }
+        }
+
+        await delay(2000);
 
         let sendBtn = document.querySelector('button[aria-label="Send"]') as HTMLButtonElement | null;
         if (sendBtn) {
             sendBtn.click();
+            await delay(2000);
         } else {
-            console.error("Send button not found");
+            throw new Error("Send button not found");
         }
+    }
 
-        await delay(2000);
-
-        // back 2 steps to return to chat list | data-testid="back-refreshed"
-
-        for (let i = 0; i < 2; i++) {
+    private async returnToChatList(steps: number = 2) {
+        for (let i = 0; i < steps; i++) {
             let backBtn = document.querySelector('span[data-testid="back-refreshed"]') as HTMLDivElement | null;
             if (backBtn) {
                 backBtn.click();
                 await delay(2000);
             } else {
-                console.error("Back button not found");
-                // return;
+                console.error("Back button not found at step " + (i + 1));
             }
         }
     }
 
+    private async addToContactsAndMsg(name: string, phone: string, msg: string) {
+        try {
+            await this.openNewChatDrawer();
+            await this.openNewContactForm();
+            await this.fillContactInfo(name, phone);
+            await this.saveContact();
+            await this.sendMessageToCurrentChat(msg);
+            await this.returnToChatList(2);
+        } catch (error) {
+            console.error("Error in addToContactsAndMsg:", error);
+            await this.returnToChatList(2);
+            throw error;
+        }
+    }
+
     async run() {
+        // await this.addToContactsAndMsg(name, phone, message);
+        await this.sendMessageToCurrentChat(`Hello Sir/Ma’am,
+We are from FlaxStudio. We create websites and mobile apps for businesses like hospitals, restaurants, hotels, shops, clinics, and more.
+
+Our solutions help businesses attract more customers, manage bookings/orders, and grow online at affordable pricing.
+
+You can check our website here:
+https://flax-studio.vercel.app
+
+Let us know if you are interested. Thank you 🙂
+`);
+        return
         const settings = await extensionApi.getSettings();
         const allLeads = await extensionApi.getAllLeads();
         const template = settings?.messageTemplate || "Hello {{name}}!";
