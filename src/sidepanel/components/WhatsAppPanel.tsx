@@ -29,7 +29,14 @@ export const WhatsAppPanel: React.FC = () => {
   };
 
   const handleSave = async () => {
-    // ...existing code...
+    const currentSettings = await extensionApi.getSettings();
+    await extensionApi.updateSettings({ 
+      ...currentSettings,
+      limit: currentSettings?.limit || 10,
+      messageTemplate: template,
+      whatsappLimit: waLimit
+    });
+    alert('Configuration saved!');
   };
 
   const handleResetStatus = async () => {

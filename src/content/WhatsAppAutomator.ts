@@ -24,9 +24,11 @@ export class WhatsAppAutomator {
     private async fillContactInfo(name: string, phone: string) {
         let nameInput = document.querySelector('div[data-testid="text-input"]') as HTMLInputElement | null;
         let phoneInput = document.querySelector('input[data-testid="phone-number-input"]') as HTMLInputElement | null;
+
+        let syncSwitchInput = document.querySelector('#sync-contact-switch') as HTMLInputElement | null;
         let syncSwitch = document.querySelector('label[for="sync-contact-switch"]>span') as HTMLLabelElement | null;
 
-        if (!nameInput || !phoneInput || !syncSwitch) {
+        if (!nameInput || !phoneInput || !syncSwitch || !syncSwitchInput) {
             throw new Error("One or more input fields not found");
         }
 
@@ -37,8 +39,10 @@ export class WhatsAppAutomator {
         phoneInput.value = phone;
         phoneInput.dispatchEvent(new Event('input', { bubbles: true }));
 
-        await delay(1000);
-        syncSwitch.click()
+        if (syncSwitchInput.ariaChecked === 'false') {
+            await delay(1000);
+            syncSwitch.click();
+        }
         await delay(3000);
     }
 
@@ -71,7 +75,7 @@ export class WhatsAppAutomator {
         const lines = msg.split('\n');
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            
+
             // Fake typing: insert characters one by one with a small delay
             for (const char of line) {
                 document.execCommand('insertText', false, char);
@@ -89,11 +93,11 @@ export class WhatsAppAutomator {
                     cancelable: true,
                 });
                 messageInput.dispatchEvent(event);
-                
+
                 // Using insertText with '\n' instead of insertLineBreak is often 
                 // more compatible with Lexical editors and prevents buffer clearing.
                 document.execCommand('insertText', false, '\n');
-                await delay(200); 
+                await delay(200);
             }
         }
 
