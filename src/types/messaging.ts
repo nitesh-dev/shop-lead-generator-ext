@@ -25,6 +25,7 @@ export type MessageMap = {
     'GET_ALL_LEADS': void;
     'IMPORT_LEADS': LeadData[];
     'CLEAR_ALL_LEADS': void;
+    'RESET_LEADS_STATUS': void;
     
     // Settings
     'GET_SETTINGS': void;

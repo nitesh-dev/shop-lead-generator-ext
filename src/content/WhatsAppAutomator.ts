@@ -136,18 +136,7 @@ export class WhatsAppAutomator {
     }
 
     async run() {
-        // await this.addToContactsAndMsg(name, phone, message);
-        await this.sendMessageToCurrentChat(`Hello Sir/Ma’am,
-We are from FlaxStudio. We create websites and mobile apps for businesses like hospitals, restaurants, hotels, shops, clinics, and more.
 
-Our solutions help businesses attract more customers, manage bookings/orders, and grow online at affordable pricing.
-
-You can check our website here:
-https://flax-studio.vercel.app
-
-Let us know if you are interested. Thank you 🙂
-`);
-        return
         const settings = await extensionApi.getSettings();
         const allLeads = await extensionApi.getAllLeads();
         const template = settings?.messageTemplate || "Hello {{name}}!";
@@ -173,11 +162,14 @@ Let us know if you are interested. Thank you 🙂
             console.log(`🚀 Sending to ${name} (${phone})...`);
             try {
                 await this.addToContactsAndMsg(name, phone, message);
+                console.log(`✅ Successfully sent message to ${name}`);
                 await extensionApi.reportLead({ ...lead, status: 'sent' });
-            } catch (err) {
-                console.error(`Failed to send to ${name}`, err);
+            } catch (err: any) {
+                console.error(`❌ Failed to send to ${name}:`, err.message);
+                // Ensure we report the failure to the background script
                 await extensionApi.reportLead({ ...lead, status: 'failed' });
             }
+            // Significant delay between leads to avoid rate limiting
             await delay(5000);
         }
 

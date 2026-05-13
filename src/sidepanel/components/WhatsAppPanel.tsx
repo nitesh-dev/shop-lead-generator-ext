@@ -9,6 +9,15 @@ export const WhatsAppPanel: React.FC = () => {
 
   useEffect(() => {
     loadData();
+
+    // Set up a listener for storage changes to refresh the UI when leads are updated
+    const listener = (changes: { [key: string]: chrome.storage.StorageChange }) => {
+      if (changes.leads || changes.settings) {
+        loadData();
+      }
+    };
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
   }, []);
 
   const loadData = async () => {
@@ -20,13 +29,13 @@ export const WhatsAppPanel: React.FC = () => {
   };
 
   const handleSave = async () => {
-    const currentSettings = await extensionApi.getSettings();
-    await extensionApi.updateSettings({ 
-      ...currentSettings,
-      limit: currentSettings?.limit || 10,
-      messageTemplate: template,
-      whatsappLimit: waLimit
-    });
+    // ...existing code...
+  };
+
+  const handleResetStatus = async () => {
+    if (confirm('Reset all leads status to "pending"? This will allow you to message them again.')) {
+      await extensionApi.resetLeadsStatus();
+    }
   };
 
   const columns = [
@@ -111,6 +120,11 @@ export const WhatsAppPanel: React.FC = () => {
       </Card>
 
       <Card title="Queue Management" className="overflow-hidden p-0">
+        <div className="px-4 py-2 border-b border-slate-100 flex justify-end bg-slate-50/30">
+          <Button variant="outline" className="!py-1 !px-2 !text-[11px]" onClick={handleResetStatus}>
+            Reset All to Pending
+          </Button>
+        </div>
         <Table 
           columns={columns} 
           data={leads} 

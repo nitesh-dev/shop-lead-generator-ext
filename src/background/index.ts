@@ -100,6 +100,13 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
                     await chrome.storage.local.set({ leads: [] });
                     result = { success: true };
                     break;
+                case 'RESET_LEADS_STATUS':
+                    const resetData = await chrome.storage.local.get('leads');
+                    const resetLeads = Array.isArray(resetData.leads) ? (resetData.leads as LeadData[]) : [];
+                    const updatedLeads = resetLeads.map(l => ({ ...l, status: 'pending' as const }));
+                    await chrome.storage.local.set({ leads: updatedLeads });
+                    result = { success: true };
+                    break;
                 default:
                     sendResponse({ success: false, error: 'Unknown message type' } as ApiResponse);
                     return;
