@@ -140,7 +140,7 @@ export class WhatsAppAutomator {
         if (!confirm(`Start sending messages to ${leadsToProcess.length} leads? (Limit: ${waLimit})`)) return;
 
         for (const lead of leadsToProcess) {
-            const name = lead.shopData.name || 'Friend';
+            const name = `${lead.shopData.name} (Lead)` || 'Lead';
             const phone = normalizePhone(lead.shopData.phone);
             const message = template.replace('{{name}}', name);
 

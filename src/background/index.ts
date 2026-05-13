@@ -50,11 +50,16 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
                     });
                     
                     if (existingLeadIndex === -1) {
-                        leads.push(newLead);
+                        leads.push({ ...newLead, status: newLead.status || 'pending' });
                         result = { saved: true };
                         console.log('[Background] New lead saved:', newLead.shopData?.name);
                     } else {
-                        leads[existingLeadIndex] = newLead;
+                        // MERGE status and other data
+                        leads[existingLeadIndex] = { 
+                            ...leads[existingLeadIndex], 
+                            ...newLead,
+                            status: newLead.status || leads[existingLeadIndex].status || 'pending'
+                        };
                         result = { saved: true, updated: true };
                         console.log('[Background] Lead updated (merged):', newLead.shopData?.name);
                     }

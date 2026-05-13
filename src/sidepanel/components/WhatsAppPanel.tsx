@@ -16,7 +16,7 @@ export const WhatsAppPanel: React.FC = () => {
     if (settings?.messageTemplate) setTemplate(settings.messageTemplate);
     if (settings?.whatsappLimit) setWaLimit(settings.whatsappLimit);
     const allLeads = await extensionApi.getAllLeads();
-    setLeads(allLeads.filter((l: any) => l.shopData?.phone));
+    setLeads(allLeads);
   };
 
   const handleSave = async () => {
