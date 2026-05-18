@@ -1,4 +1,6 @@
-import { ExtensionMessage, ApiResponse, LeadData, Settings } from "../types/messaging";
+import { ExtensionMessage, LeadData, Settings, ApiResponse } from "../types/messaging";
+import { supabase } from "../services/supabase";
+import { migrateLeadsToSupabase } from "../utils/migration";
 
 chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
     const message = msg as ExtensionMessage;
@@ -10,66 +12,59 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
 
             switch (message.type) {
                 case 'LEAD_FOUND':
-                    const storage = await chrome.storage.local.get('leads');
-                    let leads = Array.isArray(storage.leads) ? (storage.leads as LeadData[]) : [];
-                    
-                    // Cleanup existing duplicates and invalid entries before processing
-                    const seenPhones = new Set<string>();
-                    leads = leads.filter(l => {
-                        const p = l.shopData?.phone;
-                        if (!p || p.trim() === '') return false; // Remove if no phone
-                        const normalized = p.replace(/[^\d+]/g, '');
-                        if (seenPhones.has(normalized)) return false; // Remove duplicate
-                        seenPhones.add(normalized);
-                        return true;
-                    });
-
                     const newLead = message.payload as LeadData;
-                    const newPhone = newLead.shopData?.phone;
+                    const phone = newLead.shopData?.phone;
 
-                    // If phone is missing, skip the lead
-                    if (!newPhone || newPhone.trim() === '') {
-                        console.log('[Background] Skipping lead: No phone number');
+                    if (!phone || phone.trim() === '') {
                         result = { saved: false, reason: 'missing_phone' };
-                        // Save the cleaned list even if we skip the new one
-                        await chrome.storage.local.set({ leads });
                         break;
                     }
+
+                    const normalizedPhone = phone.replace(/[^\d+]/g, '').replace(/^0+/, '');
                     
-                    const normalizedNewPhone = newPhone.replace(/[^\d+]/g, '');
-                    console.log({newLead})
-                    
-                    // Filter by phone number only
-                    const existingLeadIndex = leads.findIndex((l) => {
-                        const existingPhone = l.shopData?.phone;
-                        if (existingPhone) {
-                            const normalize = (p: string) => p.replace(/[^\d+]/g, '');
-                            return normalize(existingPhone) === normalizedNewPhone;
-                        }
-                        return false;
-                    });
-                    
-                    if (existingLeadIndex === -1) {
-                        leads.push({ ...newLead, status: newLead.status || 'pending' });
-                        result = { saved: true };
-                        console.log('[Background] New lead saved:', newLead.shopData?.name);
+                    // Upsert to Supabase
+                    const { error } = await supabase
+                        .from('leads')
+                        .upsert({
+                            phone_normalized: normalizedPhone,
+                            name: newLead.shopData?.name,
+                            phone: newLead.shopData?.phone,
+                            address: newLead.shopData?.address,
+                            rating: newLead.shopData?.rating,
+                            reviews: newLead.shopData?.reviews,
+                            category: newLead.shopData?.category,
+                            website: newLead.shopData?.website,
+                            map_url: newLead.link, // Used newLead.link instead of shopData.mapUrl
+                            status: newLead.status || 'pending',
+                            raw_data: newLead
+                        }, { onConflict: 'phone_normalized' });
+
+                    if (error) {
+                        console.error('[Background] Supabase error:', error);
+                        result = { saved: false, error: error.message };
                     } else {
-                        // MERGE status and other data
-                        leads[existingLeadIndex] = { 
-                            ...leads[existingLeadIndex], 
-                            ...newLead,
-                            status: newLead.status || leads[existingLeadIndex].status || 'pending'
-                        };
-                        result = { saved: true, updated: true };
-                        console.log('[Background] Lead updated (merged):', newLead.shopData?.name);
+                        result = { saved: true };
                     }
-                    
-                    await chrome.storage.local.set({ leads });
                     break;
+
                 case 'GET_ALL_LEADS':
-                    const allLeadsData = await chrome.storage.local.get('leads');
-                    result = Array.isArray(allLeadsData.leads) ? (allLeadsData.leads as LeadData[]) : [];
+                    const { data: leads, error: getError } = await supabase
+                        .from('leads')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+
+                    if (getError) {
+                        console.error('[Background] Supabase get error:', getError);
+                        result = [];
+                    } else {
+                        // Map back to LeadData format if needed
+                        result = (leads || []).map(l => ({
+                            ...l.raw_data,
+                            status: l.status
+                        }));
+                    }
                     break;
+
                 case 'GET_SETTINGS':
                     const settingsData = await chrome.storage.local.get('settings');
                     result = (settingsData.settings as Settings) || { limit: 10 };
@@ -80,32 +75,43 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
                     break;
                 case 'IMPORT_LEADS':
                     const importLeads = message.payload as LeadData[];
-                    const currentData = await chrome.storage.local.get('leads');
-                    let currentLeads = Array.isArray(currentData.leads) ? (currentData.leads as LeadData[]) : [];
-                    
-                    const existingPhones = new Set(currentLeads.map(l => l.shopData?.phone?.replace(/[^\d+]/g, '')).filter(Boolean));
-                    
-                    const newLeads = importLeads.filter(lead => {
-                        const phone = lead.shopData?.phone?.replace(/[^\d+]/g, '');
-                        if (!phone || existingPhones.has(phone)) return false;
-                        existingPhones.add(phone);
-                        return true;
-                    });
-                    
-                    const mergedLeads = [...currentLeads, ...newLeads];
-                    await chrome.storage.local.set({ leads: mergedLeads });
-                    result = { count: newLeads.length };
+                    const preparedLeads = importLeads.map(l => ({
+                        phone_normalized: l.shopData?.phone?.replace(/[^\d+]/g, '').replace(/^0+/, ''),
+                        name: l.shopData?.name,
+                        phone: l.shopData?.phone,
+                        address: l.shopData?.address,
+                        rating: l.shopData?.rating,
+                        reviews: l.shopData?.reviews,
+                        category: l.shopData?.category,
+                        website: l.shopData?.website,
+                        map_url: l.link, // Used l.link instead of l.shopData.mapUrl
+                        status: l.status || 'pending',
+                        raw_data: l
+                    })).filter(l => l.phone_normalized);
+
+                    const { error: importError } = await supabase
+                        .from('leads')
+                        .upsert(preparedLeads, { onConflict: 'phone_normalized' });
+
+                    result = { count: preparedLeads.length, error: importError?.message };
                     break;
                 case 'CLEAR_ALL_LEADS':
-                    await chrome.storage.local.set({ leads: [] });
+                    // Safety check: actually we might not want to clear cloud database easily
+                    // But for consistency:
+                    const { error: clearError } = await supabase
+                        .from('leads')
+                        .delete()
+                        .neq('id', 0); // Delete all
+                    result = { success: !clearError };
+                    break;
                     result = { success: true };
                     break;
                 case 'RESET_LEADS_STATUS':
-                    const resetData = await chrome.storage.local.get('leads');
-                    const resetLeads = Array.isArray(resetData.leads) ? (resetData.leads as LeadData[]) : [];
-                    const updatedLeads = resetLeads.map(l => ({ ...l, status: 'pending' as const }));
-                    await chrome.storage.local.set({ leads: updatedLeads });
-                    result = { success: true };
+                    const { error: resetError } = await supabase
+                        .from('leads')
+                        .update({ status: 'pending' })
+                        .neq('id', 0);
+                    result = { success: !resetError };
                     break;
                 default:
                     sendResponse({ success: false, error: 'Unknown message type' } as ApiResponse);
@@ -121,3 +127,8 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
 
     return true;
 });
+
+// Expose for manual console migration
+if (typeof self !== 'undefined') {
+    (self as any).migrateLeadsToSupabase = migrateLeadsToSupabase;
+}

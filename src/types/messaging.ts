@@ -4,6 +4,9 @@ export interface ShopData {
   phone: string;
   website: string;
   category?: string;
+  rating?: string | number;
+  reviews?: string | number;
+  mapUrl?: string;
 }
 
 export interface LeadData {
