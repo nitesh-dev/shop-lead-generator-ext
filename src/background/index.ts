@@ -65,6 +65,50 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
                     }
                     break;
 
+                case 'GET_LEADS_PAGE':
+                    // payload: { limit?: number, offset?: number }
+                    {
+                        const { limit = 10, offset = 0 } = (message.payload as any) || {};
+                        const parsedLimit = Number(limit) || 10;
+                        const parsedOffset = Number(offset) || 0;
+
+                        const { data: pageLeads, error: pageError, count } = await supabase
+                            .from('leads')
+                            .select('*', { count: 'exact' })
+                            .order('created_at', { ascending: false })
+                            .range(parsedOffset, parsedOffset + parsedLimit - 1);
+
+                        if (pageError) {
+                            console.error('[Background] Supabase page error:', pageError);
+                            result = {
+                                items: [],
+                                total: 0,
+                                limit: parsedLimit,
+                                offset: parsedOffset,
+                                hasMore: false,
+                            };
+                        } else {
+                            const items = (pageLeads || []).map((l: any) => ({
+                                ...l.raw_data,
+                                status: l.status,
+                                id: l.id,
+                            }));
+
+                            const total = typeof count === 'number' ? count : (items.length + parsedOffset);
+                            const hasMore = parsedOffset + items.length < total;
+
+                            result = {
+                                items,
+                                total,
+                                limit: parsedLimit,
+                                offset: parsedOffset,
+                                hasMore,
+                                nextOffset: hasMore ? parsedOffset + parsedLimit : null,
+                            };
+                        }
+                    }
+                    break;
+
                 case 'GET_SETTINGS':
                     const settingsData = await chrome.storage.local.get('settings');
                     result = (settingsData.settings as Settings) || { limit: 10 };
@@ -103,8 +147,6 @@ chrome.runtime.onMessage.addListener((msg: unknown, _sender, sendResponse) => {
                         .delete()
                         .neq('id', 0); // Delete all
                     result = { success: !clearError };
-                    break;
-                    result = { success: true };
                     break;
                 case 'RESET_LEADS_STATUS':
                     const { error: resetError } = await supabase

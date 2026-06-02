@@ -10,9 +10,17 @@ interface TableProps<T> {
   columns: Column<T>[];
   data: T[];
   emptyMessage?: string;
+  pagination?: {
+    limit: number;
+    offset: number;
+    total: number;
+    onPrev?: () => void;
+    onNext?: () => void;
+    onPage?: (offset: number) => void;
+  };
 }
 
-export function Table<T>({ columns, data, emptyMessage = "No data available." }: TableProps<T>) {
+export function Table<T>({ columns, data, emptyMessage = "No data available.", pagination }: TableProps<T>) {
   if (data.length === 0) {
     return (
       <div className="p-10 text-center space-y-2">
@@ -49,6 +57,30 @@ export function Table<T>({ columns, data, emptyMessage = "No data available." }:
           ))}
         </tbody>
       </table>
+
+      {pagination && (
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            className="px-3 py-1 bg-slate-100 rounded"
+            onClick={pagination.onPrev}
+            disabled={pagination.offset === 0}
+          >
+            Prev
+          </button>
+
+          <button
+            className="px-3 py-1 bg-slate-100 rounded"
+            onClick={pagination.onNext}
+            disabled={pagination.offset + pagination.limit >= pagination.total}
+          >
+            Next
+          </button>
+
+          <div className="ml-auto text-sm text-slate-500">
+            {Math.min(pagination.total, pagination.offset + 1)}–{Math.min(pagination.total, pagination.offset + pagination.limit)} of {pagination.total}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,15 @@ import { Card, Button, Table } from '../../components/ui';
 export const WhatsAppPanel: React.FC = () => {
   const [template, setTemplate] = useState('');
   const [waLimit, setWaLimit] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
+  const [offset, setOffset] = useState(0);
+  const [totalLeads, setTotalLeads] = useState(0);
   const [leads, setLeads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -18,14 +26,28 @@ export const WhatsAppPanel: React.FC = () => {
     };
     chrome.storage.onChanged.addListener(listener);
     return () => chrome.storage.onChanged.removeListener(listener);
-  }, []);
+  }, [offset, pageSize]);
 
-  const loadData = async () => {
+  const loadSettings = async () => {
     const settings = await extensionApi.getSettings();
     if (settings?.messageTemplate) setTemplate(settings.messageTemplate);
-    if (settings?.whatsappLimit) setWaLimit(settings.whatsappLimit);
-    const allLeads = await extensionApi.getAllLeads();
-    setLeads(allLeads);
+    if (settings?.whatsappLimit) {
+      setWaLimit(settings.whatsappLimit);
+      setPageSize(settings.whatsappLimit);
+    }
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const result = await extensionApi.getLeadsPage({ limit: pageSize, offset });
+      setLeads(result.items || []);
+      setTotalLeads(result.total || 0);
+    } catch (error) {
+      console.error("Failed to load leads page:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSave = async () => {
@@ -36,6 +58,8 @@ export const WhatsAppPanel: React.FC = () => {
       messageTemplate: template,
       whatsappLimit: waLimit
     });
+    setPageSize(waLimit);
+    setOffset(0);
     alert('Configuration saved!');
   };
 
@@ -132,11 +156,22 @@ export const WhatsAppPanel: React.FC = () => {
             Reset All to Pending
           </Button>
         </div>
-        <Table 
-          columns={columns} 
-          data={leads} 
-          emptyMessage="Queue is empty. Find leads in the Maps tab first!"
-        />
+        {loading ? (
+          <div className="p-10 text-center text-slate-400 italic">Loading page...</div>
+        ) : (
+          <Table 
+            columns={columns} 
+            data={leads} 
+            emptyMessage="Queue is empty. Find leads in the Maps tab first!"
+            pagination={{
+              limit: pageSize,
+              offset,
+              total: totalLeads,
+              onPrev: () => setOffset(Math.max(0, offset - pageSize)),
+              onNext: () => setOffset(offset + pageSize),
+            }}
+          />
+        )}
       </Card>
     </div>
   );

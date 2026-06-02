@@ -4,21 +4,45 @@ import { Card, Button, Input, Table } from "../../components/ui";
 
 export const MapsPanel: React.FC = () => {
   const [limit, setLimit] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
+  const [offset, setOffset] = useState(0);
+  const [totalLeads, setTotalLeads] = useState(0);
   const [leads, setLeads] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [offset, pageSize]);
+
+  const loadSettings = async () => {
+    const settings = await extensionApi.getSettings();
+    if (settings?.limit) {
+      setLimit(settings.limit);
+      // setPageSize(settings.limit);
+    }
+  };
 
   const loadData = async () => {
-    const settings = await extensionApi.getSettings();
-    if (settings?.limit) setLimit(settings.limit);
-    const allLeads = await extensionApi.getAllLeads();
-    setLeads(allLeads);
+    setLoading(true);
+    try {
+      const result = await extensionApi.getLeadsPage({ limit: pageSize, offset });
+      setLeads(result.items || []);
+      setTotalLeads(result.total || 0);
+    } catch (error) {
+      console.error("Failed to load leads page:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSave = async () => {
     await extensionApi.updateSettings({ limit });
+    setPageSize(limit);
+    setOffset(0);
   };
 
   const handleExport = () => {
@@ -153,7 +177,7 @@ export const MapsPanel: React.FC = () => {
         </div>
       </Card>
 
-      <Card title={`Leads (${leads.length})`} className="overflow-hidden p-0">
+      <Card title={`Leads (${totalLeads})`} className="overflow-hidden p-0">
         <div className="p-3 border-b border-slate-200 bg-slate-50/50 flex justify-between items-center gap-2">
           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">
             Data Management
@@ -183,11 +207,22 @@ export const MapsPanel: React.FC = () => {
             </div>
           </div>
         </div>
-        <Table
-          columns={columns}
-          data={leads}
-          emptyMessage="No leads found yet. Start scraping from Google Maps!"
-        />
+        {loading ? (
+          <div className="p-10 text-center text-slate-400 italic">Loading page...</div>
+        ) : (
+          <Table
+            columns={columns}
+            data={leads}
+            emptyMessage="No leads found yet. Start scraping from Google Maps!"
+            pagination={{
+              limit: pageSize,
+              offset,
+              total: totalLeads,
+              onPrev: () => setOffset(Math.max(0, offset - pageSize)),
+              onNext: () => setOffset(offset + pageSize),
+            }}
+          />
+        )}
       </Card>
     </div>
   );

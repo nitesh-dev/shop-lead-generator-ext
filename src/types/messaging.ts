@@ -26,6 +26,7 @@ export type MessageMap = {
     // Lead Management
     'LEAD_FOUND': LeadData;
     'GET_ALL_LEADS': void;
+    'GET_LEADS_PAGE': { limit?: number; offset?: number };
     'IMPORT_LEADS': LeadData[];
     'CLEAR_ALL_LEADS': void;
     'RESET_LEADS_STATUS': void;
